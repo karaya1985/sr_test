@@ -128,17 +128,17 @@
       <div class="cover-emoji">📖</div>
       <h1>우리들의 방명록</h1>
       <p>입장해서 보드를 둘러보고,<br />+ 버튼으로 흔적을 남겨보세요.</p>
-      <button class="enter-btn" onclick="enter()">입장하기 →</button>
+      <button class="enter-btn" id="btnEnter">입장하기 →</button>
     </div>
   </section>
 
   <section id="board" class="screen">
     <div class="board-top">
       <div class="left">
-        <button class="back-link" onclick="goCover()">←</button>
+        <button class="back-link" id="btnBack">←</button>
         <h2>📖 방명록</h2>
       </div>
-      <button class="add-btn" onclick="openModal()">+ 추가하기</button>
+      <button class="add-btn" id="btnOpenModal">+ 추가하기</button>
     </div>
     <div class="board" id="notes"></div>
   </section>
@@ -155,171 +155,3 @@
         <textarea id="msgInput" placeholder="남기고 싶은 말을 적어주세요" maxlength="500"></textarea>
       </div>
       <div class="field">
-        <label>사진 (선택)</label>
-        <div class="photo-row">
-          <label for="fileInput" class="photo-btn">📷 사진 선택</label>
-          <input type="file" id="fileInput" accept="image/*" onchange="handleFile(event)" />
-          <img id="preview" alt="미리보기" />
-        </div>
-      </div>
-      <div class="status-msg" id="statusMsg"></div>
-      <div class="modal-btns">
-        <button class="btn-cancel" onclick="closeModal()">취소</button>
-        <button class="btn-save" id="btnSave" onclick="submitEntry()">남기기</button>
-      </div>
-    </div>
-  </div>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
-    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
-
-    // 제공해주신 Firebase 설정 정보
-    const firebaseConfig = {
-      apiKey: "AIzaSyDUpGBhlcUsduzA2QC-DGHHWQtJWb5chDc",
-      authDomain: "sr-test-79934.firebaseapp.com",
-      projectId: "sr-test-79934",
-      storageBucket: "sr-test-79934.firebasestorage.app",
-      messagingSenderId: "731838192460",
-      appId: "1:731838192460:web:7be3fca3574a1b008e4de9",
-      measurementId: "G-M33HTN1DBX"
-    };
-
-    // Firebase 초기화
-    const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
-    const db = getFirestore(app);
-    const storage = getStorage(app);
-
-    // 전역 상태 변수
-    let selectedFileBase64 = null; 
-    const colors = ["#6a5acd", "#e07a5f", "#3d9970", "#e6a817", "#c0559f", "#2e86de"];
-
-    /* ================= 화면 전환 함수 선언 (전역 바인딩) ================= */
-    window.enter = function() {
-      document.getElementById("cover").classList.remove("active");
-      document.getElementById("board").classList.add("active");
-      window.scrollTo(0, 0);
-    }
-    window.goCover = function() {
-      document.getElementById("board").classList.remove("active");
-      document.getElementById("cover").classList.add("active");
-    }
-
-    /* ================= 모달 제어 ================= */
-    window.openModal = function() {
-      document.getElementById("modalBg").classList.add("active");
-    }
-    window.closeModal = function() {
-      document.getElementById("modalBg").classList.remove("active");
-      resetForm();
-    }
-    function resetForm() {
-      document.getElementById("nameInput").value = "";
-      document.getElementById("msgInput").value = "";
-      document.getElementById("fileInput").value = "";
-      document.getElementById("preview").style.display = "none";
-      document.getElementById("statusMsg").textContent = "";
-      document.getElementById("btnSave").disabled = false;
-      document.getElementById("btnSave").textContent = "남기기";
-      selectedFileBase64 = null;
-    }
-
-    /* ================= 사진 선택 및 압축 처리 ================= */
-    window.handleFile = function(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const img = new Image();
-        img.onload = function () {
-          const maxW = 600;
-          const scale = Math.min(1, maxW / img.width);
-          const canvas = document.createElement("canvas");
-          canvas.width = img.width * scale;
-          canvas.height = img.height * scale;
-          canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-          
-          selectedFileBase64 = canvas.toDataURL("image/jpeg", 0.7);
-          const preview = document.getElementById("preview");
-          preview.src = selectedFileBase64;
-          preview.style.display = "block";
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-
-    /* ================= 데이터 업로드 (Firebase 저장) ================= */
-    window.submitEntry = async function() {
-      const name = document.getElementById("nameInput").value.trim();
-      const msg = document.getElementById("msgInput").value.trim();
-      const status = document.getElementById("statusMsg");
-      const btnSave = document.getElementById("btnSave");
-
-      if (!name || !msg) {
-        status.textContent = "이름과 메시지를 모두 입력해주세요.";
-        return;
-      }
-
-      try {
-        btnSave.disabled = true;
-        btnSave.textContent = "저장 중...";
-        status.textContent = "";
-
-        let photoUrl = null;
-
-        // 이미지가 선택되었다면 Firebase Storage에 업로드
-        if (selectedFileBase64) {
-          const filename = "images/" + Date.now() + "_" + Math.random().toString(36).substring(2, 7) + ".jpg";
-          const storageRef = ref(storage, filename);
-          // base64 dataurl 포맷 문자열 업로드
-          await uploadString(storageRef, selectedFileBase64, 'data_url');
-          photoUrl = await getDownloadURL(storageRef);
-        }
-
-        // Firestore 'guestbook' 컬렉션에 데이터 삽입
-        await addDoc(collection(db, "guestbook"), {
-          name: name,
-          message: msg,
-          photo: photoUrl,
-          createdAt: Date.now(), // 정렬용 타임스탬프
-          timeString: new Date().toLocaleString("ko-KR"),
-          colorIndex: Math.floor(Math.random() * colors.length) // 랜덤 컬러 부여
-        });
-
-        closeModal();
-      } catch (error) {
-        console.error("에러 발생:", error);
-        status.textContent = "오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
-        btnSave.disabled = false;
-        btnSave.textContent = "남기기";
-      }
-    }
-
-    /* ================= 데이터 실시간 수신 및 보드 렌더링 ================= */
-    const q = query(collection(db, "guestbook"), orderBy("createdAt", "desc"));
-    
-    // Firestore 실시간 리스너 연결
-    onSnapshot(q, (snapshot) => {
-      const box = document.getElementById("notes");
-      if (snapshot.empty) {
-        box.innerHTML = '<div class="empty">아직 방명록이 없어요.<br>+ 추가하기로 첫 글을 남겨보세요!</div>';
-        return;
-      }
-      
-      box.innerHTML = "";
-      snapshot.forEach((doc) => {
-        const d = doc.data();
-        const note = document.createElement("div");
-        note.className = "note";
-        
-        // 데이터에 컬러가 지정되어있지 않으면 임의 배정
-        const noteColor = colors[d.colorIndex !== undefined ? d.colorIndex : 0];
-        note.style.setProperty("--c", noteColor);
-        
-        note.innerHTML =
-          '<div class="note-name"></div>' +
-          '<div class="note-msg"></div>'
