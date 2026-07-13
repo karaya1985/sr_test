@@ -3,19 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase 연동 완료</title>
+    <title>Firebase 연동 테스트</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f7f6;
+            margin: 0;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 {
+            color: #ffca28; /* 파이어베이스 시그니처 옐로우 */
+            margin-bottom: 10px;
+        }
+        .status {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #666;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 6px;
+            background: #eee;
+        }
+        .success {
+            color: #2e7d32;
+            background: #e8f5e9;
+        }
+    </style>
 </head>
 <body>
 
-    <h1>🔥 파이어베이스 연결 성공!</h1>
-    <p>브라우저에서 <strong>F12키</strong>를 눌러 <strong>Console(콘솔)</strong> 탭을 확인해보세요.</p>
+    <div class="card">
+        <h1>🔥 Firebase Connection</h1>
+        <p>파이어베이스 프로젝트 연결 상태를 확인합니다.</p>
+        <div id="firebase-status" class="status">연결 확인 중...</div>
+    </div>
 
     <script type="module">
-        // 최신 Firebase v11 라이브러리 가져오기 (CDN 방식)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-analytics.js";
 
-        // 제공해주신 파이어베이스 계정 설정 정보
+        // 요청하신 Firebase 프로젝트 config 설정 정보
         const firebaseConfig = {
             apiKey: "AIzaSyDUpGBhlcUsduzA2QC-DGHHWQtJWb5chDc",
             authDomain: "sr-test-79934.firebaseapp.com",
@@ -26,13 +66,25 @@
             measurementId: "G-M33HTN1DBX"
         };
 
-        // Firebase 및 Analytics 초기화
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
-        
-        // 연결 확인용 로그
-        console.log("Firebase가 성공적으로 연결되었습니다!", app);
-        console.log("Analytics가 활성화되었습니다.", analytics);
+        try {
+            // Firebase 및 Analytics 초기화
+            const app = initializeApp(firebaseConfig);
+            const analytics = getAnalytics(app);
+            
+            // 성공 시 화면 UI 변경 및 콘솔 로그 출력
+            const statusEl = document.getElementById('firebase-status');
+            statusEl.textContent = "✅ 파이어베이스 연결 성공!";
+            statusEl.classList.add('success');
+
+            console.log("Firebase App Initialized:", app);
+        } catch (error) {
+            // 에러 발생 시 처리
+            const statusEl = document.getElementById('firebase-status');
+            statusEl.textContent = "❌ 연결 실패 (콘솔 오류 확인)";
+            statusEl.style.color = "#c62828";
+            statusEl.style.background = "#ffebee";
+            console.error("Firebase 초기화 에러:", error);
+        }
     </script>
 </body>
 </html>
